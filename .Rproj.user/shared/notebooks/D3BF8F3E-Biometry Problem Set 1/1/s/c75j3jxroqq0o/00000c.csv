@@ -1,0 +1,7 @@
+"0",""
+"0","#converting gonad data to z-scores and plotting using a histogram through base R"
+"0","zscore.gonad<-scale(Kelp_Bass_Gonad_Data$gonad_mass, center=TRUE, scale=TRUE) "
+"0","hist(zscore.gonad, breaks=10, # over 500 data points, use 10 breaks"
+"0","     col=""orange"", density=25, angle=60, #creating hatch pattern"
+"0","     main=""Histogram of Gonad Mass (z-scores)"", xlab=""Gonad Mass"") #labels"
+"0",""

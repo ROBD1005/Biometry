@@ -1,0 +1,1 @@
+"0","plot(Bush~Buchanan, data=dataframe) # outlier more obvious if we dont use log "

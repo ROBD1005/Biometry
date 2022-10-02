@@ -1,0 +1,5 @@
+"0",""
+"0","n_gonad <-length(Kelp_Bass_Gonad_Data$gonad_mass) "
+"0","hist(Kelp_Bass_Gonad_Data$gonad_mass, breaks=10, # over 500 data points, use 10 breaks"
+"0","     col=""dodgerblue3"", density=25, angle=60, #creating hatch pattern"
+"0","     main=""Histogram of Gonad Mass"", xlab=""Gonad Mass"") #labels"

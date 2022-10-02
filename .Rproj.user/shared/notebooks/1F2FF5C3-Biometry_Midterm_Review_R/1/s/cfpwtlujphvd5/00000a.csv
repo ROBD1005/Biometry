@@ -1,0 +1,7 @@
+"0",""
+"0","#transforming the data with Palm Beach County included"
+"0","dataframe$logBush<-log(dataframe$Bush)"
+"0","dataframe$logBuchanan<-log(dataframe$Buchanan)"
+"0",""
+"0","#compare outliers using transformed versus untransformed data"
+"0","plot(logBush~logBuchanan, data=dataframe) "

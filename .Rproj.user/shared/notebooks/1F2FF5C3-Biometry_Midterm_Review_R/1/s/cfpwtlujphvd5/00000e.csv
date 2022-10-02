@@ -1,0 +1,4 @@
+"0",""
+"0","#Formal outlier test"
+"0","model<-lm(Bush~Buchanan, data=dataframe)"
+"0","outlierTest(model)"

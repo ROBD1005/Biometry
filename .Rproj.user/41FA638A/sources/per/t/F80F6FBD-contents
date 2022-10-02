@@ -1,0 +1,111 @@
+---
+title: "geostrophic"
+author: "Robert Dellinger"
+date: "10/1/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(tidyverse)
+require(oce)
+require(ocedata)
+require(sf)
+require(lubridate)
+```
+
+
+```{r}
+argo = dir("./Processing/argo_profile/", 
+               pattern = "prof.nc",
+               recursive = TRUE, 
+               full.names = TRUE)
+```
+
+```{r}
+argo.float = argo[39]%>% 
+  read.argo()%>% 
+  handleFlags() %>% 
+  argoGrid(p = seq(5,400,5))
+```
+
+```{r}
+time = argo.float[["time"]]
+lon = argo.float[["longitude"]]
+lat = argo.float[["latitude"]]
+```
+
+```{r}
+argo.section = argo.float%>%  
+  as.section()
+
+
+```
+
+
+```{r}
+
+
+## make a section from list of argo profile
+eacc.section = argo.section %>% subset(stationId  >= 206 & stationId <= 212)
+
+## obtain the time and spatial information corresponding to each profile
+time.eacc = time[206:212] %>% as.Date()
+lon.eacc = lon[206:212]
+lat.eacc = lat[206:212]
+
+## create a table from the time, lon and lat variable extracted above
+eacc.extract.tb = data.frame(time.eacc, lon.eacc, lat.eacc) %>% 
+  rename(time = 1, lon = 2, lat = 3)
+```
+
+
+```{r}
+
+
+## calculate  and plot dynamic height
+eacc.dh = eacc.section %>% 
+  sectionSort(by = "latitude") %>%
+  swDynamicHeight() 
+
+# plot(eacc.dh$distance, eacc.dh$height, type = "l", 
+#ylab = "Dynamic Height (m)", xlab = "Distance (km)")
+```
+
+
+```{r}
+
+eacc.dh.df = eacc.dh %>% as.data.frame()
+## get latitude from the section for labelling the x-axis
+lat = eacc.section@metadata$latitude
+## add latitude colum
+eacc.dh.df = data.frame(lat,eacc.dh.df)
+
+ggplot(data = eacc.dh.df, aes(x = lat, y = height)) + 
+  geom_line(size = 1.2, col = "red") +
+  theme(panel.background = element_rect(colour = "black"),
+        axis.text = element_text(size = 11),
+        axis.title = element_text(size = 12),
+        panel.grid.minor = element_blank())+
+  labs(y = "Dynamic Height (m)", x = "Latitude")
+
+```
+
+
+```{r}
+## get latitude value along the EACC from the section object
+lat = eacc.section@metadata$latitude%>%round(2)
+## 
+f = coriolis(lat) ## derive coriolis force
+g = gravity(lat) ## derive acceleration due to gravity
+
+## then cacluate and plot the geostrophic velocity
+gv = diff(eacc.dh$height) / diff(eacc.dh$distance) * g / f / 1000
+
+## make a data frame for plotting with ggplot2
+eacc.dh.gv.df = data.frame(lat,gv)
+
+## plot(eac.dh$distance, gv, type = "l", ylab = "Velocity (m/s)", xlab = "Distance (km)")
+
+```
+

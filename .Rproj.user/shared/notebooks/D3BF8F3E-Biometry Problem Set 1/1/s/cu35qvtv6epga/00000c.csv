@@ -1,0 +1,5 @@
+"0",""
+"0","log_Agaricia_Data <- log(Agaricia_Data)"
+"0","hist(log_Agaricia_Data$weight, breaks=6, # less then 50 data points, use 6 breaks"
+"0","     col=""purple"", "
+"0","     main=""Log Transformed Histogram of Agaricia agaricites Weights"", xlab=""Weight"") #labels"

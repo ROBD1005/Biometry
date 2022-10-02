@@ -1,0 +1,6 @@
+"0",""
+"0","snail_data <- read.csv(here(""Data"", ""SnailData.csv""))"
+"0",""
+"0","snail_data <- snail_data %>% "
+"0","  na.omit()"
+"0",""

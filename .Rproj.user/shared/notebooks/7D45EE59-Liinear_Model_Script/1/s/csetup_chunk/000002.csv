@@ -1,0 +1,7 @@
+"0","knitr::opts_chunk$set(echo = TRUE)"
+"0",""
+"0","require(tidyverse)"
+"0","require(modelr)"
+"0","require(kableExtra)"
+"0","require(plotly)"
+"0",""

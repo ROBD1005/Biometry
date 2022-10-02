@@ -1,0 +1,7 @@
+"0",""
+"0","se <- function(x) (sd(x) / sqrt(length(x))) #standard error function "
+"0",""
+"0","#subsetting data to make a graph"
+"0","graphdata <- dataframe %>%"
+"0","  summarize(Mean=mean(Density), Standard.Error=se(Density))"
+"0","graphdata"

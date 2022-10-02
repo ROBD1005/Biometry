@@ -1,0 +1,8 @@
+"0","iris = iris%>%"
+"0","  add_residuals(petal.mod)"
+"0",""
+"0",""
+"0","iris%>%as.tibble()%>%select(5,1:4,6)%>%sample_n(12)%>%kable(""html"", digits = 2, align = ""c"", caption = ""The residual values in the dataset"", col.names = c(""Species"", ""Length"", ""Width"", ""Length"", ""Width"", ""Residual""))%>%"
+"0","  add_header_above(c("""",""Sepal"" = 2, ""Petal"" = 2, """"))%>%"
+"0","  add_header_above(c("""", ""Flower Measurement (cm)"" = 4, """"))%>%"
+"0","  column_spec(1:6, width = ""8cm"", color = ""black"", bold = FALSE)"

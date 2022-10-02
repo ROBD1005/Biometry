@@ -1,0 +1,6 @@
+"0","fig4 = ggplot(data = iris, aes(x = resid))+"
+"0","  geom_freqpoly(binwidth = 0.5)+"
+"0","  cowplot::theme_cowplot() +"
+"0","  labs(x = ""Model residuals"",y = ""Frequencies"")"
+"0",""
+"0","plotly::ggplotly(fig4)"
