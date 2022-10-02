@@ -1,0 +1,832 @@
+---
+title: 'Biometry: Midterm Study Guide'
+author: "Robert Dellinger"
+date: "9/28/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Lecture Review 
+
+##  Basic Statistics and Introduction to R
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(here)
+library(psych)
+library(moments)
+library(car)
+```
+
+###  (1) (4 pts) The following data are numbers of protozoa sampled from a microcosm and counted on a hemacytometer: 6, 11, 4, 5, 7, 3, 5, 1, 5, 6. Calculate the statistics listed below for this sample of protozoan densities. Do these calculations “by hand” using a calculator.
+
+```{r Problem 1}
+
+#clearing the environment 
+rm(list=ls()) 
+
+#calculating the mean 
+sum.of.all.data.points = 6 + 11 + 4 + 5 + 7 + 3 + 5 + 1 + 5 + 6
+number.of.data.points =length(c(6, 11, 4, 5, 7, 3, 5, 1, 5, 6))
+
+Mean = sum.of.all.data.points/number.of.data.points 
+print(Mean)
+
+#calculating the variance 
+sum.of.squared.difference.from.mean = (6-Mean)^2 + (11-Mean)^2 + (4-Mean)^2 + (5-Mean)^2 + (7-Mean)^2 + (3-Mean)^2 + (5-Mean)^2 + (1-Mean)^2 + (5-Mean)^2 + (6-Mean)^2
+
+Variance = sum.of.squared.difference.from.mean/(number.of.data.points -1)
+print(Variance)
+
+#calculating the standard deviation
+Standard.Deviation = sqrt(Variance)
+print(Standard.Deviation)
+
+#calculating the standard error
+Standard.Error = Standard.Deviation/sqrt(number.of.data.points)
+print(Standard.Error)
+
+#calculating the coefficient of variation 
+Coefficient.of.Variation = (Standard.Deviation/Mean) #to get percentage *100
+print(Coefficient.of.Variation)
+
+#finding the median (value that is directly in the middle after being ordered)
+Median <- median(c(6, 11, 4, 5, 7, 3, 5, 1, 5, 6))
+print(Median)
+
+#finding the mode (value that is repeated the most)
+#creating a function for mode 
+mode <- function(v) {
+ uniqv <- unique(v)
+ uniqv[which.max(tabulate(match(v, uniqv)))]
+} 
+
+Mode <- mode(c(6, 11, 4, 5, 7, 3, 5, 1, 5, 6))
+print(Mode) 
+
+```
+
+###  (2a) (4 pts) Being the insightful biologist that you are, you notice that protozoa seem more dense at the bottom of the microcosm, perhaps because there is more food available there. You want to know if there is statistical support for this casual observation. You sample 20 replicate microcosms and measure the densities of protozoa. In 10 of the microcosms, you take the sample from the top and in the other 10 microcosms, you take the sample from the bottom. The data are as follows:
+
+###  Top (# per uL): 3, 1, 0, 5, 4, 3, 6, 3, 4, 7 
+###  Bottom (# per uL): 3, 12, 3, 4, 7, 8, 7, 5, 15, 9
+
+###  Using R, calculate the following statistics for both top and bottom: Mean, Standard deviation, Variance, 95% Confidence Interval.
+
+```{r Problem 2: Part A}
+#clearing the environment 
+rm(list=ls()) 
+
+#Wrangling the Data
+Top<- c(3,1,0,5,4,3,6,3,4,7)
+Bottom<-c(3,12,3,4,7,8,7,5,15,9)
+dataframe<-as.data.frame(cbind(Top, Bottom)) #binds strings together into a data frame
+#glimpse(dataframe)
+dataframe<-gather(data=dataframe, key=Location, value=Protozoa, Top:Bottom, factor_key=TRUE) # convert to long format (#Top:Bottom = selection of columns)
+
+#calculating statistics for data using functions and the summarize() command
+
+se <- function(x) (sd(x) / sqrt(length(x))) #creating function for standard error
+
+mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+} #creating function for Mode
+
+#summarized statistics by group 
+summary.statistics <- dataframe %>%
+  group_by(Location) %>%
+  summarize(Mean=mean(Protozoa), Standard.Deviation=sd(Protozoa), Variance=var(Protozoa), Standard.Error=se(Protozoa), Median=median(Protozoa), Mode=mode(Protozoa))
+print(summary.statistics)
+
+#Constructing a Confidence Interval 
+    # 99%CI = 2.58*sd/sqrt(n) or 2.58*se
+    # 95%CI = 1.96*sd/sqrt(n) or 1.96*se
+    # 90%CI = 1.65*sd/sqrt(n) or 1.65*se
+
+topCI<-1.96*summary.statistics[1,5] #selecting for row (1st), then column (5th)
+bottomCI<-1.96*summary.statistics[2,5] #selecting for row (2nd), then column (5th)
+
+print(topCI)
+print(bottomCI)
+
+```
+
+###  (2b) (5 pts) Make a publication-quality bar graph in R that presents means and standard errors for each group (top vs bottom). Provide a figure legend that describes the graph and includes a statement about whether you think protozoa densities differ between the top and bottom of the microcosm.
+
+```{r Problem 2: Part B}
+
+graph.data <- summary.statistics %>%
+  select(Location, Mean, Standard.Error)
+#glimpse(graph.data)
+
+ggplot(graph.data) +
+  geom_bar(aes(x=Location, y=Mean, fill=Location), stat="identity", alpha=0.85) +
+  geom_errorbar(aes(x=Location, ymin=Mean-Standard.Error, ymax=Mean+Standard.Error), 
+               position=position_dodge(0.9), width=0.5, colour="black", alpha=0.95, size=1)+
+  theme(legend.position = "right", legend.title=element_text(size=20),
+       legend.text=element_text(size=14)) +
+  theme_minimal() + 
+labs(y = "Mean Count (per uL)", x="Top versus Bottom", title = "Mean Number of Protozoan Densities (per uL)\nBetween the Top and Bottom of a Microcosm", caption = "Mean number of protozoan between the top and bottom of a microcosm differ.\n Given that the error between bars plots do not overlap, the differences are statistically relevant." ,fill="Position")
+
+```
+
+
+###  (3a) (3 pts) The Excel file named "kelp bass gonad mass" contains the weights of gonads from several hundred kelp bass collected by Dr. Mark Steele’s lab. Estimate the mean, median, s2, s, CV, skewness, and kurtosis.
+
+```{r Problem 3: Part A}
+#clearing the environment 
+rm(list=ls())
+
+#read in data
+dataframe <- read_csv(here("Data", "Kelp_Bass_Gonad_Data.csv"))
+#glimpse(dataframe)
+
+se <- function(x) (sd(x) / sqrt(length(x))) #creating function for standard error
+
+cv <- function(x) (sd(x) / mean(x)) #creating function for cv
+
+#summarize variables into a data frames 
+summary.statistics <- dataframe %>%  
+  summarize(Mean=mean(gonad_mass), Median=median(gonad_mass),  Variance=var(gonad_mass),
+            Standard.Deviation=sd(gonad_mass), Standard.Error=se(gonad_mass), Coefficient.Variation=cv(gonad_mass), Skewness=skewness(gonad_mass),
+            Kurtosis=kurtosis(gonad_mass))
+print(summary.statistics)
+
+```
+
+###  (3b) (3 pts) What effect would adding 5.0 to each observation of gonad mass have on the values of the mean, median, s2, s, CV, skewness, and kurtosis? (You don’t need to show the new values, but just describe how the statistics have changed.)
+
+```{r Problem 3: Part B}
+
+#Altering data by ading 5 to each observation 
+dataframe$gonad_mass_5<-dataframe$gonad_mass+5
+
+#summarize variables into a data frames 
+summary.statistics <- dataframe %>%  
+  summarize(Mean=mean(gonad_mass_5), Median=median(gonad_mass_5),  Variance=var(gonad_mass_5),
+            Standard.Deviation=sd(gonad_mass_5), Standard.Error=se(gonad_mass_5), Coefficient.Variation=cv(gonad_mass_5), Skewness=skewness(gonad_mass_5),
+            Kurtosis=kurtosis(gonad_mass_5))
+print(summary.statistics)
+
+```
+Median and mean: change proportionally to the transformation performed (increase by 5)
+
+Variance and standard deviation: there is no difference when a constant is added to each value since the dispersion away from the central value (mean) does not change. 
+
+Coefficient of variation (CV): changes when a constant is added to the data set since this is a ratio between s and the mean.  When a constant is added, the mean always changes but s does not, changing the ratio between the two. 
+
+Kurtosis and skewness: Remain the same because these measures can only be affected by transformations that affect the shape of the distribution, such as log, arcsin, or square-root.  Adding or multiplying constants to a data set does not change the shape of the distribution.
+
+###  (3c) (3 pts) What would be the effect of adding 5.0 and then multiplying by 10.0?
+
+```{r Problem 3: Part C}
+#To add 5 and then multiply by 10, let's use mass5 (already added 5) and multiply by 10
+dataframe$gonad_mass_10<-dataframe$gonad_mass_5*10
+
+#summarize variables into a data frames 
+summary.statistics <- dataframe %>%  
+  summarize(Mean=mean(gonad_mass_10), Median=median(gonad_mass_10),  Variance=var(gonad_mass_10),
+            Standard.Deviation=sd(gonad_mass_10), Standard.Error=se(gonad_mass_10), Coefficient.Variation=cv(gonad_mass_10), Skewness=skewness(gonad_mass_10),
+            Kurtosis=kurtosis(gonad_mass_10))
+print(summary.statistics)
+
+```
+Median and mean: change proportionally to the transformation performed 
+Variance and standard deviation: When the data set is multiplied by a constant, this changes the dispersion away from the central value, therefore changing the value of s2 and s.  
+
+Coefficient of variation (CV): When constants are multiplied to the data set, s changes proportionately to the mean, so the CV remains the same.  
+
+Kurtosis and skewness: Remain the same because these measures can only be affected by transformations that affect the shape of the distribution, such as log, arcsin, or square-root.  Adding or multiplying constants to a data set does not change the shape of the distribution.
+
+###  (3d) (3 pts) Make a histogram of all raw observations (untransformed values) in the kelp bass gonad mass data set. Do these data look relatively normal or not? Add the histogram below.
+
+```{r Problem 3: Part D}
+
+#creating a histogram plot using base R 
+hist(dataframe$gonad_mass, col="dodgerblue3", density=25, angle=60, #creating hatch pattern
+     main="Histogram of Gonad Mass", xlab="Gonad Mass") #labels
+
+skewness(dataframe) 
+kurtosis(dataframe)
+
+```
+No, these data do not look normal. They are heavily skewed to the right, which is supported by our skewness metric above.
+
+###  (3e) (3 pts) Convert all raw observations in the kelp bass data set into Z-scores. Make a histogram of this new data set. How does this histogram differ from the one for the raw observations? Add the new histogram below.
+
+```{r Problem 3: Part E}
+
+#converting data to z-scores 
+zscore.dataframe<-scale(dataframe$gonad_mass, center=TRUE, scale=TRUE) #Center centers the data on the mean (subtracts mean); Scale divides by s.d.
+
+#plotting histogram using base R
+hist(zscore.dataframe, col="orange", density=25, angle=60, #creating hatch pattern
+     main="Histogram of Gonad Mass (z-scores)", xlab="Gonad Mass") #labels
+
+#use skewness and kurtosis to compare how the histograms differ
+skewness(zscore.dataframe) 
+kurtosis(zscore.dataframe)
+
+```
+
+This still looks VERY skewed to the right. Skewness value is about the same.
+
+###  (3f) (3 pts) Use the original kelp bass gonad data to create a Normal Probability Plot. Do the data appear to be normally distributed? Add the plot below.
+
+```{r Problem 3: Part F, results='hide'}
+
+#probability plot
+qqp(dataframe$gonad_mass, "norm")
+
+```
+
+
+No, the data does not appear to be distributed normally as there are a lot of data points outside of the confidence limits for a normal distribution.
+
+###  (4) (5 pts) Round the following numbers to three significant figures and state their implied limits before and after rounding.
+
+```{r Problem 4}
+#clear the environment 
+rm(list=ls())
+
+options(digits=10) #set R options to 10 digits 
+
+#implied limits 
+implied.limit.1 <- c(106.5-0.05, 106.5+0.05)
+
+implied.limit.2 <- c(0.068191-0.0000005, 0.068191+0.0000005)
+
+implied.limit.3 <- c(3.049-0.0005, 3.049+0.0005)
+
+implied.limit.4 <- c((2.03456-0.000005)*10^6, (2.03456+0.000005)*10^6)
+
+implied.limit.5 <- c(2.914-0.0005, 2.914+0.0005)
+
+implied.limit.6 <- c(20.15000-0.000005, 20.15000+0.000005)
+
+print(c(implied.limit.1, implied.limit.2, implied.limit.3, implied.limit.4, implied.limit.5, implied.limit.6))
+
+
+#Rounding values to 3 significant digits #to round up "ceiling" to round down "floor"
+plyr::round_any(106.5, 1, f = ceiling)  # [1] 107 3 sigfigs
+
+plyr::round_any(3.049, .01, f = ceiling) # [1] 3.05 3 sigfigs
+
+plyr::round_any(0.068191, .0001, f = ceiling) # [1] 0.0682 3 sigfigs
+
+format(signif(2.03456*10^6, digits=3), scientific=TRUE) # [1] "2.03e+06" 3 sig figs 
+
+plyr::round_any(2.914, .01, f = floor) # [1] 2.91 3 sigfigs
+
+plyr::round_any(20.15000, .1, f = ceiling) #[1] 20.2 3 sigfigs
+
+#Implied limits after rounding 
+implied.limit.1 <- c(107-0.5, 107+0.5)
+
+implied.limit.2 <- c(0.0682-0.00005, 0.0682+0.00005)
+
+implied.limit.3 <- c(3.05-0.005, 3.05+0.005)
+
+implied.limit.4 <- c((2.03-0.005)*10^6, (2.03+0.005)*10^6)
+
+implied.limit.5 <- c(2.91-0.005, 2.91+0.005)
+
+implied.limit.6 <- c(20.2-0.05, 20.2+0.05)
+
+
+print(c(implied.limit.1, implied.limit.2, implied.limit.3, implied.limit.4, implied.limit.5, implied.limit.6))
+```
+
+###  (5) (5 pts) For each of the following questions, define the sampling unit and the statistical population. 
+
+###  (a) What proportion of blue whales in the Pacific Ocean are reproductively mature?
+	**statistical population:** all blue whales in the Pacific
+	**sampling unit:** a whale
+	
+###  (b) How many mitochondria per cell?
+	**statistical population:** all cells
+	**sampling unit:** a cell
+	
+###  (c) How many seeds per white flowered plant?
+	**statistical population:** all white flowered plants
+	**sampling unit:** a white flower
+	
+###  (d) How many bacteria per 1mL in a sewage treatment plant?
+	**statistical population:** all water in the treatment plant
+	**sampling unit:** 1mL sample
+	
+###  (e) How much time do bees spend each time they visit a flower?
+	**statistical population:** all visits by bees
+	**sampling unit:** a bee visit
+	
+###  (f) How many bees visit in a 5-minute observation period?
+	**statistical population:** all 5 min periods
+	**sampling unit:** a 5 min period
+
+
+###  (6a) (5 pts) Carla (former MS student in Peter Edmunds’ lab) sampled the weights (in grams) of 30 individuals of the coral, Agaricia agaricites. The data are available in the file “Agaricia.csv”. Are the data normally distributed? Does log-transformation improve the normality or not? Support your answer with whatever graph(s) you think are appropriate.
+
+```{r Problem 6: Part A, message=FALSE, , results='hide', fig.show="hold", out.width="50%"}
+
+#clear the environment 
+rm(list=ls())
+
+#read in data 
+dataframe<- read_csv(here("Data", "Agaricia.csv"))
+#glimpse(dataframe)
+
+#to visualize normalcy we can use one of the three following commands 
+#boxplot: boxplot(dataframe$weight, main="weight")
+#histogram: hist(mydata$weight)
+#probability plot: qqp(dataframe$weight, "norm")
+
+#creating a probability plot 
+qqp(dataframe$weight, "norm", main="Histogram of Agaricia agaricites Weights", xlab ="Norm Quantiles", ylab = "Weight")
+
+#boxplot(dataframe$logweight, main="logweight")
+#hist(dataframe$logweight)
+
+#log transforming data 
+dataframe$logweight<-log(dataframe$weight)
+
+#creating a probability plot of log transformed data
+qqp(dataframe$logweight, "norm", main="Histogram of Log Transformed Agaricia agaricites Weights", xlab ="Norm Quantiles", ylab = "log(Weight)")
+
+```
+
+There are multiple ways to look at normality including a boxplot, histogram, and probability plot. Using a probability plot, one can see that all of the data points stay within the confidence interval; therefore, the data looks normal.
+
+There are multiple kinds of transformations that we can use on our data set including: 
+  log = good for right skewed data or may be used to improve or linearity (for regressions)
+  square roots = good for counts 
+  arcsin = good for ratios and percentages 
+
+Since this variable is a continuous variable, we would use a log transformation. The log transformation looks like a less normal distribution compared to the untransformed data, therefore we would use the orginal untransformed data. 
+
+###(6b) (4 pts) Use the Agaricia data set to estimate the mean ± 95% CI of the untransformed data sample by resampling the data with bootstrapping (just use 1000 resamplings). Plot the frequency distribution of estimates for the mean and indicate the 95% confidence intervals on the plot.
+
+```{r Problem 6: Part B}
+
+#preview sample mean
+mean.weight <- mean(dataframe$weight)
+#glimpse(mean.weight)
+
+#bootstrapping means 
+bootstrapped.mean<-replicate(1000, {  
+  samples<-sample(dataframe$weight,replace=TRUE); 
+  mean(samples)  }) #take the mean of the subsample
+#this output provides 1000 different estimates of the mean, based on 1000 random samples
+sortedboots<-sort(bootstrapped.mean) #sorting means 
+
+mean <- mean(bootstrapped.mean)
+print(mean)
+
+#constructing the 95% confidence intervals using (25th and 975th place)
+lowCI<-sortedboots[25]
+highCI<-sortedboots[975]
+upperCI<-highCI - mean(bootstrapped.mean)
+lowerCI<-mean(bootstrapped.mean) - lowCI
+confidence.interval <-c(lowerCI, upperCI)
+print(confidence.interval)
+
+#histogram of bootstrapped means
+hist(sortedboots, col="lightcyan", main="Bootstrapped Histogram of Agaricia agaricites Weights", xlab="Weight", ylab ="Frequency")
+abline(v=lowCI, col="darkcyan") #adding vertical lines for the low and high CIs
+abline(v=highCI, col="darkcyan")
+
+```
+
+## T-tests, Correlations, and Regressions
+
+### (1) Kai, an undergraduate in a CSUN Ecology class, noticed that in the intertidal area of southern California, there did not seem to be many sea urchins at a site that had relatively flat rocks, compared to a nearby site that had more complex topography. She wanted to know if there was statistical support for this casual observation. So she sampled densities of sea urchins in randomly placed 1-m2 quadrats at the two sites. She sampled 10 replicate quadrats at each of the two sites and collected these data:
+		
+### Site 1 (flat rocks): 3, 3, 4, 5, 2, 3, 2, 3, 4, 5
+### Site 2 (complex rocks): 3, 5, 2, 1, 7, 8, 7, 4, 11, 9
+
+### (a) (2pts) First calculate the following statistics for each of the two sites:
+
+```{r Problem 1: Part A}
+
+#clearing the environment 
+rm(list=ls()) 
+
+#Wrangling the Data
+Flat.Rocky.Intertidal <- c(3, 3, 4, 5, 2, 3, 2, 3, 4, 5)
+Complex.Rocky.Intertidal <- c(3, 5, 2, 1, 7, 8, 7, 4, 11, 9)
+dataframe<-as.data.frame(cbind(Flat.Rocky.Intertidal, Complex.Rocky.Intertidal)) #binds strings together into a data frame
+#glimpse(dataframe)
+dataframe<-gather(data=dataframe, key=Site, value=Count, Flat.Rocky.Intertidal:Complex.Rocky.Intertidal, factor_key=TRUE) # convert to long format (#Data:Data= selection of columns)
+
+se <- function(x) (sd(x) / sqrt(length(x))) #standard error function 
+
+#calculating statistics for data using functions and the summarize() command
+summary.statistics <- dataframe %>%
+  group_by(Site) %>%
+  summarize(Mean=mean(Count), Standard.Deviation=sd(Count), Standard.Error =se(Count),
+            Variance=var(Count))
+print(summary.statistics)
+
+```
+
+### (b) (2 pts) Next use a two-sample t-test to test whether the mean density of urchins differed statistically between the two sites.  Try both the more traditional “pooled variances” test and the “separate variances” test.  
+
+```{r}
+
+#running a t-test with equal variances
+equal.variance.t.test<-t.test(Count~Site, var.equal=TRUE, data=dataframe)
+print(equal.variance.t.test) #standard deviations are very different
+
+#running a t-test with unequal variances (Welch's t-test)
+unequal.variance.t.test<-t.test(Count~Site, var.equal=FALSE, data=dataframe)
+print(unequal.variance.t.test)
+
+#checking to see if variances are equal in order to determine which test is better
+variance.statistics <- summary.statistics %>%
+  select(Site, Variance) %>%
+print(variance.statistics) #variances are substantially different therefore we would prefer to run a Welch's t-test
+
+```
+
+### (c) (2 pts) Make a publication-quality graph of the data provided in question 10. Show means and standard error of the mean (SEM).  Provide a figure legend. Write one sentence to be used in the results section of this paper that describes the conclusion based on your hypothesis testing.
+
+```{r}
+
+#gather summary statistic data necessary to create a boxplot (mean and standard error)
+graphdata <-summary.statistics %>% 
+  select(Site, Mean, Standard.Error)
+#glipse(graphdata)
+
+#graphing a boxplot using ggplot 
+ggplot(graphdata) +
+  geom_bar( aes(x=Site, y=Mean, fill=Site), stat="identity", alpha=0.85) +
+  geom_errorbar( aes(x=Site, ymin=Mean-Standard.Error, ymax=Mean+Standard.Error), width=0.5, colour="black",
+                 alpha=0.95, size=1)+
+  theme(legend.position = "right", legend.title=element_text(size=20),
+        legend.text=element_text(size=14))+
+  theme_minimal() +
+  labs(x="Site", y="Urchins (#cm^2)", fill="Site", title = "Difference in Urchin Densities Between \n Complex and Flat Intertidal Topography", caption = 
+"Figure 1. Mean (+/-SE) of urchins per m^2 at two sites.  \n The topography was more complex at Site 2 than at Site 1.")
+
+```
+
+Results: There was no significant difference in urchin density between sites 1 and 2 (t= 2.13, df=11, P = 0.056).
+
+### (2) The El Segundo blue butterfly is endangered and depends on coast buckwheat, which has declined in abundance due to coastal development. To facilitate recovery of the butterfly, native coastal plants are being restored in certain areas. The literature suggests that a density of 4 coast buckwheat plants per 25-m2 is necessary to support the butterfly. The data in the file “CoastBuckwheat.csv” contains the density of buckwheat in replicate 25 m2 quadrats in an area that is intended to be a restored habitat for the El Segundo blue butterfly. Use an appropriate t-test to test the hypothesis that buckwheat plant density has reached the 4-plants-per-25-m2 standard in this restored area and thus the plant restoration is a success.  
+
+### (a) (2 pts) Do the data meet assumptions of a t-test?  
+
+```{r}
+rm(list=ls())
+
+#load in data
+dataframe <- read_csv(here("Data", "CoastBuckwheat.csv"))
+
+#checking for normality 
+qqp(dataframe$Density, "norm")
+
+#formal test for normality 
+shapiro.test(dataframe$Density) #If P>0.05, then the data is normal
+
+```
+
+Data follows a normal distribution and therefore meets the assumptions of the t-test.
+
+### (b) (2 pts) Write a sentence that states whether this standard (4-plants-per-25-m2) been met  (support your answer with t, df, and P). 
+
+```{r}
+
+#one sample t-test 
+one.sample.t.test<-t.test(dataframe$Density, mu=4, na.rm=TRUE) #null hypothesis set to 4m^2
+print(one.sample.t.test)
+
+```
+
+Plant density in the plots is significantly greater than 4 (t=2.67, df=29, P=0.012).
+
+### (c) (3 pts) Make a bar graph, showing the mean +/- 95% CI and indicate the null hypothesis with a horizontal line on your plot.
+
+```{r}
+
+se <- function(x) (sd(x) / sqrt(length(x))) #standard error function 
+
+#subsetting data to make a graph
+graphdata <- dataframe %>%
+  summarize(Mean=mean(Density), Standard.Error=se(Density))
+graphdata
+
+#plotting a bargraph with +/- 95% CI 
+ggplot(graphdata, aes(x=1, y=Mean)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),
+        axis.text.x=element_blank()) +
+  geom_bar(stat="identity", color="dodgerblue2", fill="dodgerblue2", position="dodge", size=0.6) +
+  labs(x="", y="Buckwheat Density (# per 25m^2)") +
+  geom_errorbar(aes(ymax=Mean+Standard.Error, ymin=Mean-Standard.Error), position=position_dodge(0.9), width=0.1)+
+  geom_hline(yintercept=4, linetype=3)
+
+
+```
+
+
+### (3) (5 pts) You are testing the effects of a newly developed sports drink on athletic performance. You recruit 20 student athletes at CSUN for the experiment. Each student runs 5 km as fast as they can, twice, once after drinking a liter of the new sports drink and once after drinking a liter of water. The two runs are separated by a week, and the order is randomized among students (i.e., some get sports drink the first time and water the second, and others get the reverse order). The data for each treatment (in seconds) are in the file “RunTimes.csv”. Use an appropriate t-test to test the hypothesis that the sports drink improves athletic performance. Is there compelling evidence that the drink altered running speed? Support your answer with appropriate statistics.
+
+```{r}
+
+#clear the environment 
+rm(list=ls())
+se <- function(x) (sd(x) / sqrt(length(x)))
+
+#load data
+dataframe <- read_csv(here("Data", "Runtimes.csv"))
+dataframe <- gather(dataframe, Treatment, Time, Water:Sportsdrink, factor_key=TRUE)
+#glimpse(dataframe)
+
+#check for normality prior to plotting 
+#qqp(dataframe$Time, "norm")
+#shapiro.test(dataframe$Time) #If P>0.05, then the data is normal
+
+paired.t.test<-t.test(Time~Treatment, paired=TRUE, data=dataframe)
+print(paired.t.test)
+
+```
+Using a paired t-test, we can conclude that runners with sports drink ran at significantly different times than those with water (t=2.74, df=19, P=0.013). Runners with sports drink ran about 12% faster.
+
+###  (4) In a psychology experiment, investigators seek to determine if there is an association between how much babies cry and their IQ. The data are minutes spent crying during a day (taken at 3 months old) and IQ at age 3.  The data are in the worksheet “cryingbabies”. 
+
+###(a) (2 pts) First, graph these data using a scatterplot. 
+
+
+```{r}
+
+#Clear the environment
+rm(list=ls())
+
+#load data
+dataframe <- read_csv(here("Data", "crying_babies.csv"))
+#glimpse(dataframe)
+
+#First make a scatterplot
+plot(cryduration~IQ, data=dataframe)
+
+```
+### (b) (5 pts) Analyze the data with three different tests of correlation: Pearson’s r, Spearman's rho, and Kendall's tau. Is there an association between crying babies and their IQ? Does the answer depend on which test of correlation is used? Do you think one of these correlation tests is more appropriate than the others?
+
+```{r}
+
+#Three different tests of correlation: Pearson’s r, Spearman's rho, and Kendall's tau
+pearsons.test <- cor.test(dataframe$cryduration, dataframe$IQ, method="pearson")
+spearmans.test <- cor.test(dataframe$cryduration, dataframe$IQ, method="spearman")
+kendalls.test <- cor.test(dataframe$cryduration, dataframe$IQ, method="kendall")
+
+print(pearsons.test)
+print(spearmans.test)
+print(kendalls.test)
+
+#Pearson's is the more powerful test, but it also requires normality for both variables
+# to check for normality: 
+#qqp(mydata$cryduration, "norm")
+#qqp(mydata$IQ, "norm")
+
+# The data look mostly normal, so we should use Pearson's
+# If a few points fall out of the confidence limits, Spearmans Test 
+```
+
+Pearson’s:  r  = 0.566, t = 3.07, df = 20, P = 0.006
+
+Spearman’s: rho = 0.394, S = 1074, P = 0.070
+
+Kendall’s: tau = 0.245, z = 1.58, P = 0.114
+
+Yes, the answer depends on which test you use. They each give different strengths of correlation as well as different answers to whether the correlation is significant or not. Therefore, we need to think carefully about which test we think is most appropriate.
+The data is mostly normal, though there are a couple of points that might make us wonder. This wasn’t a huge concern, but if you wanted to be conservative in your test, then use Spearman instead of Pearson.
+The data seem to be more or less linear, so Pearson’s is appropriate. It is also a more powerful test that Spearman’s or Kendall’s, so I would probably go with Pearson’s, as long as we’re not very worried about making a Type II error.
+
+### (5) (5 pts) In 2000, using statistics could have changed history. The US Presidential election was a contest between George W. Bush (Republican) and Al Gore (Democrat). It came down to a recount in Florida to determine the outcome of the election. One concern was whether the “butterfly ballot” used in Palm Beach County caused voters intending to vote for Gore to accidentally cast their vote for Pat Buchanan (a conservative candidate for the Reform Party). We could have used statistics to analyze the relationship between votes cast for Bush and those for Buchanan by county (n=67 counties in Florida). We would expect their votes to be correlated, as both candidates had similar political views. We could then determine whether the vote totals for Palm Beach County for Buchanan were similar to other counties, or an outlier with respect to voting patterns for all other counties in Florida. The data are in the worksheet butterflyballot. They represent vote totals (in thousands) by county for the state of Florida. The last observation in the data set is for Palm Beach County. 
+
+### (a) If you leave this data point out of the analysis, are vote totals between Bush and Buchanan correlated? 
+
+```{r}
+
+#Clear the environment
+rm(list=ls())
+
+#load data
+dataframe <- read_csv(here("Data", "butterflyballot.csv"))
+#glimpse(dataframe)
+
+palm.beach.removed.dataframe <- dataframe[-67, ] #removes the 67th row (data for palm beach)
+#glimpse(palm.beach.removed.dataframe)
+
+#check to see if the data look linear
+#plot(Bush~Buchanan, data=palm.beach.removed.dataframe) #data looks linear
+
+#check for normalcy
+#qqp(palm.beach.removed.dataframe$Bush, "norm")  #no!
+#qqp(palm.beach.removed.dataframe$Buchanan, "norm") #no!
+
+#We should either use a Spearman correlation (does not assume normality) or transform the data prior to running a different correlation
+spearman.test<-cor.test(palm.beach.removed.dataframe$Bush, palm.beach.removed.dataframe$Buchanan, method="spearman")
+print(spearman.test)
+
+#Log transforming data for normalcy and running a Pearson's correlation
+palm.beach.removed.dataframe$logBush<-log(palm.beach.removed.dataframe$Bush)
+palm.beach.removed.dataframe$logBuchanan<-log(palm.beach.removed.dataframe$Buchanan)
+#qqp(palm.beach.removed.dataframe$logBush, "norm") #more normal data distribution
+#qqp(palm.beach.removed.dataframe$logBuchanan, "norm") #more normal data distribution
+
+pearsons.test<-cor.test(palm.beach.removed.dataframe$logBush, palm.beach.removed.dataframe$logBuchanan, method="pearson")
+print(pearsons.test)
+
+```
+
+Without the Palm Beach data point, the pattern looks somewhat linear, but the data are not normally distributed. In that case, we could do a Spearman’s rank correlation, in which you would find a significant correlation:  rho = 0.94, P<0.001, or a Kendall’s (tau = 0.80, P<0.001). Another way to handle this is to log-transform that data and then run a Pearson’s correlation. This also helps with the one data point that looks like it might be an outlier. If we use log-transformed data to run a Pearson’s correlation, we also find a significant correlation (r = 0.93, t = 20.4, df = 64, P<0.001). 
+
+
+### (b) If you included Palm Beach County, does it appear to be outlier with respect to the other counties? 
+
+```{r, message=FALSE, fig.show="hold", out.width="50%"}
+
+#transforming the data with Palm Beach County included
+dataframe$logBush<-log(dataframe$Bush)
+dataframe$logBuchanan<-log(dataframe$Buchanan)
+
+#compare outliers using transformed versus untransformed data
+plot(logBush~logBuchanan, data=dataframe) 
+plot(Bush~Buchanan, data=dataframe) # outlier more obvious if we dont use log 
+
+```
+If we look at the data with Palm Beach County, we can see that this county looks like an outlier from this pattern. That’s even more obvious if we plot it on the original scale, rather than a log scale.
+
+### (c) Based on the above, do you think the butterfly ballot affected the outcome of the election?
+
+```{r}
+
+#Formal outlier test
+model<-lm(Bush~Buchanan, data=dataframe)
+outlierTest(model)
+
+```
+
+Is this point a statistical outlier? Let’s do a formal test.
+Yes, this point is a statistical outlier (P<0.001), but there’s also another outlier point. So if we want to make any conclusions about the butterfly ballot, then we should also look at that other county too. Is there anything unique about it?
+
+#### (6) (5 pts) We are interested in whether the age of a pregnant woman determines how much weight she gains during pregnancy.  A few data are gathered:
+
+### Age	Weight 
+### 15	6.32
+### 16	7.04
+### 17	6.91
+### 19	7.56
+### 21	13.01
+### 22	10.34
+### 23	13.80
+### 24	17.17)
+
+### State whether or not there is a relationship between age and weight gain and support your answer with statistics. Here’s the catch…do not use R. Instead, calculate F and df as we discussed in lecture, using a calculator of Excel/Numbers. Knowing F and df will allow you to use the “FDIST” function in Excel to obtain a P-value. You do not need to provide a graph.
+
+Age increases the amount of weight gained by a woman during pregnancy (F = 30.4, df = 1,6, P=0.002).
+
+### (7) Jim Hogue intensively sampled riffles in 49 streams for invertebrate species.  The mass of all invertebrates per unit area (mg/m2) was determined, as was the total number of species found in all the riffles of a stream.  The data are in the worksheet “streams". He wants to know if species richness of invertebrates is a function of biomass.
+
+### (a) (2 pts) Provide an appropriate graph of these data. Include a best-fit line.
+
+```{r, fig.show="hold", out.width="50%"}
+
+#Clear the environment
+rm(list=ls())
+
+#load and cleaning data
+dataframe <- read_csv(here("Data", "streams.csv"))
+#glimpse(dataframe)
+
+#describe the model for this line
+plot(NumberSpp~Biomass, col="blue", data=mydata)
+
+#linear model 
+fit1<-lm(NumberSpp~Biomass, data=mydata)
+abline(fit1, col="blue") # data doesn't look linear
+
+#transform using log() and rerun linear model
+mydata$lnbiomass<-log(mydata$Biomass)
+plot(NumberSpp~lnbiomass, col="blue", data=mydata)
+fit2<-lm(NumberSpp~lnbiomass, data=mydata)
+abline(fit2, col="blue")
+
+```
+
+log-transformed data look much more linear but there is still not a great linear relationship.
+
+### (b) (2 pts) Do the data appear to meet the assumptions of simple linear regression?  Provide appropriate diagnostics. Is any transformation of either variable needed?
+
+```{r, fig.show="hold", out.width="50%"}
+
+#check assumptions
+residuals2<-residuals(fit2)
+qqp(residuals2, "norm") #normal
+
+#to get homogeneity of variance, plot the residuals against our fitted values
+fitted2<-fitted(fit2)
+plot(residuals2~fitted2)
+abline(h=0) #evenly distributed both vertically and horizontally
+
+```
+
+The data do not show a linear relationship. As biomass is likely log-normal distributed, a log-transformation fixes the linearity issue. The data also look normal and homoscedastic.
+
+
+```{r}
+
+#Here's a shortcut to getting all of the diagnostic plots you need
+plot(fit2)
+
+#With the leverage plot, you want values Cook's distance less than 1:
+plot(fit2,4)
+
+#Finally, to test whether this model is significant
+summary(fit2)
+
+
+```
+
+
+=
+
+
+############################################
+###Question 8: Predict algal surface area###
+############################################
+
+#Clear the environment
+rm(list=ls())
+
+#Import the data, which I have put in a csv file named "algae"
+mydata <- read.csv("Data/algae.csv")
+View(mydata)
+
+fit1<-lm(Surface_area~Height, data=mydata)
+plot(Surface_area~Height, col="blue", data=mydata)
+abline(fit1, col="blue")
+
+
+#Let's test assumptions
+library(car)
+plot(fit1)
+resid<-residuals(fit1)
+plot(resid~mydata$Height, ylab="Residuals of Surface Area")
+abline(h=0)
+#kinda looks like much more variance on the right side than the left
+qqPlot(fit1) #and some normality problems
+
+
+#Try ln-transformation of both variables
+mydata$lnHeight<-log(mydata$Height)
+mydata$lnSA<-log(mydata$Surface_area)
+
+fit2<-lm(lnSA~lnHeight, data=mydata)
+plot(fit2)
+resid2<-residuals(fit2)
+plot(resid2~lnHeight, ylab="Residuals from ln-transformation", data=mydata)
+abline(h=0) #looks much better
+qqp(resid2, "norm") #pretty normal
+
+#to get r^2 for the model and statistics
+summary(fit2)
+plot(lnSA~lnHeight, data=mydata)
+abline(fit2)
+
+#Check for outliers:
+outlierTest(fit2) #no outliers
+
+#Check for high leverage points
+plot(fit2,4)
+
+
+#Or I can make a better plot with confidence limits in ggplot
+library(ggplot2)
+ggplot(mydata, aes(x=lnHeight, y=lnSA))+
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank()) +
+  geom_point(shape=1) + 
+  guides(fill=none) + 
+  ylab("ln Surface Area") +
+  xlab("ln Height") +
+  geom_smooth(method="lm", formula = y~x)
+
+#Because we're particularly interested in the value of the slope here,
+#and because there is error in the measure of x and y, we really should use a 
+#model II regression.
+library(lmodel2)
+model1<-lmodel2(lnSA~lnHeight, range.y="relative", range.x="relative", data=mydata, nperm=99)
+model1 #Use these parameters (from RMA) to get estimates of slope and intercept
+
+plot(model1, xlab="ln Height", ylab="ln Surface Area")
+
+
+
+
+
+

@@ -1,0 +1,75 @@
+---
+title: "D"
+author: "Robert Dellinger"
+date: "10/1/2022"
+output: html_document
+---
+
+Introduction: A Brief Overview
+
+Getting study site data
+The ERDDAP server provides simple and consistent way to subset and download oceanographic datasets from satellites and buoys to your area of interest. ERDDAP is providing free public access to huge amounts of environmental datasets
+
+
+Packages Required for the Process
+Besides xtractomatic package, I am going to load other packages for data procesing and visualization. These packages include tidyverse3, lubridate4, spData5, sf6, oce7, and insol8 that I will use to manipulate, tidy, analyse and visulize the extracted SST and chl-a data from MODIS satellite. The chunk below shows the package needed to accomplish the task in this post
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+## load the package needed for the routine
+# library(DT)
+library(tidyverse)
+library(lubridate)
+library(spData)
+library(sf)
+library(oce)
+library(insol)
+library(xtractomatic)
+# library(pals)
+```
+
+
+Area of Interest:
+
+```{r}
+##  Map the Pemba channel with ggplot2, sf and ggsn packages
+ggplot()+geom_sf(data = x, fill = "ivory", col = 1)+
+  coord_sf(xlim = c(38.5, 40), ylim = c(-6,-4))+
+  theme_bw()+
+  theme(panel.background = element_rect(colour = 1, fill = "lightblue"),
+        panel.grid = element_line(colour = NA),
+        axis.text = element_text(colour = 1, size = 10))+
+  scale_x_continuous(breaks = seq(38.5, 40, length.out = 4)%>%round(digits = 1))+
+  scale_y_continuous(breaks = seq(-5.8, -4.1,length.out = 5)%>%round(digits = 1))+
+  labs(x = NULL, y = NULL)+
+  geom_text(aes(x = 39.36, y = -5.2, label = "Pemba\nChannel"), col = "black")+
+  ggsn::scalebar(location = "bottomright", x.min = 38.5, 
+                 x.max = 39.95, y.min = -6, y.max = -4, dist = 25, dd2km = T, 
+                 model = "WGS84",st.dist = 0.02, st.size = 4)
+```
+
+
+Argo Floats serve as tagging features
+
+
+Argo data provide sufficient information for tracking the water masses and the physical propoerties of the upper layer of the world oceans. 
+Processing Argo float data I used oce package developed by Dan Kelley and Clark Richards. The oce package has read.argo function that read directly NetCDF file from Argo floats.
+
+```{r}
+## read argo file
+argo.1901124 = read.argo("E:/Doctoral/udsm/Processing/argo_profile/csiro/1901124/1901124_prof.nc")%>%handleFlags()
+
+## make a section using the profiles recorded in argo float
+argo.section = argo.1901124%>%as.section()
+```
+
+
+
+was converted to hydrographic section that was used to plot sections of temperature against time (Figure 2) and temperature against longitude (Figure 3) from the surface to 1000 meter deep.
+
+```{r}
+argo.section%>%plot(which = "temperature", ztype = "image", xtype = "time", ylim = c(1000,0))
+argo.section%>%plot(which = "temperature", ztype = "image", xtype = "longitude", ylim = c(1000,0))
+
+```

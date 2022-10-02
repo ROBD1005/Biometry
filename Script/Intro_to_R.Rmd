@@ -1,0 +1,123 @@
+---
+title: "Biometry_Intro_to_R"
+author: "Robert Dellinger"
+date: "9/1/2022"
+output: html_document
+---
+
+```{r Library, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#clear environment prior to runing code
+rm(list=ls()) 
+
+#load libraries
+library(here)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(psych)
+
+```
+
+## R Markdown
+
+```{r Download Data}
+
+snail_data <- read.csv(here("Data", "SnailData.csv"))
+
+snail_data <- snail_data %>% 
+  na.omit()
+
+```
+
+
+```{r Basic Stats in R}
+
+#mean weight of snails 
+mean.weight <- mean(snail_data$Weight)
+mean.weight 
+
+#mean length of snails 
+mean.length <- mean(snail_data$Length) 
+mean.length 
+
+#standard deviation of snail length 
+sd.length <- sd(snail_data$Length)
+sd.length
+
+#standard error of snail length 
+# equation: se = sd/sqrt(n).
+se.length<-sd(snail_data$Length)/sqrt(length(snail_data$Length))
+se.length
+
+```
+
+```{r Psych Package}
+
+#summary statistics by location
+location.stats <- describeBy(snail_data, group=snail_data$Location)
+location.stats
+
+#summary statistics by location tide
+tidal.stats <- describeBy(snail_data, group=snail_data$TidalHeight)
+tidal.stats
+
+location.tidal.stats <- describeBy(snail_data, list(snail_data$Location, snail_data$TidalHeight))
+
+```
+
+```{r Tidyr Package}
+
+#filter for only the San Diego site 
+SD.site <- snail_data %>%
+  filter(Location == "SanDiego")
+glimpse(SD.site)
+
+#filter for the San Diego site and for low tide 
+SD.site.lowtide <- snail_data %>%
+  filter(Location =="SanDiego", TidalHeight=="Low")
+glimpse(SD.site.lowtide)
+
+#summary statistics using Tidy
+summary_snails <- snail_data %>% 
+   summarize(mean=mean(Length, na.rm=TRUE), std_dev=sd(Length, na.rm=TRUE))
+summary_snails
+
+summarybygroup <- snail_data %>%
+  group_by(Location, TidalHeight) %>%
+  summarize(mean=mean(Length, na.rm=TRUE), std_dev=sd(Length, na.rm=TRUE))
+summarybygroup
+
+```
+
+```{r Plotting Data}
+
+graphdata <- snail_data %>%
+  group_by(Location) %>%
+  summarize(meanLength=mean(Length, na.rm=TRUE), se=sd(Length, na.rm=TRUE)/sqrt(length(Length)))
+
+p<-ggplot(graphdata, aes(x=Location, y=meanLength))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+           panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_bar(stat="identity", color="dodgerblue2", fill="dodgerblue2", position="dodge", size=0.6)+ labs(x="Location", y="Length")+ 
+  geom_errorbar(aes(ymax=meanLength+se, ymin=meanLength-se), position=position_dodge(0.9), width=0.1) 
+
+print(p)
+
+graphdata2 <- snail_data %>%
+  group_by(Location, TidalHeight) %>%
+  summarize(meanLength=mean(Length, na.rm=TRUE), se=sd(Length, na.rm=TRUE)/sqrt(length(Length)))
+
+p2 <- ggplot(graphdata2, aes(x=Location, y=meanLength, fill=factor(TidalHeight), group=factor(TidalHeight))) + #basic plot with TidalHeight as a grouping factor
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_bar(stat="identity", position="dodge", size=0.6) + #determines the bar width
+  geom_errorbar(aes(ymax=meanLength+se, ymin=meanLength-se), stat="identity", position=position_dodge(width=0.9), width=0.1) + #adds error bars
+  labs(x="Location", y="Snail Length", fill="TidalHeight") + #labels the x and y axes
+  scale_fill_manual(values=c("Low"="tomato","High"="dodgerblue2")) #fill colors for the bars
+
+print(p2)
+
+```
+
